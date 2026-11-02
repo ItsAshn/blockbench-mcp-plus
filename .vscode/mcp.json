@@ -1,0 +1,27 @@
+{
+	"servers": {
+		"blockbench": {
+			"url": "http://localhost:3000/bb-mcp",
+			"type": "http",
+			"dev": {
+				"watch": "src/**/*.ts",
+			}
+		},
+		"bbmodel": {
+			"command": "bunx",
+			"args": [
+				"github:ItsAshn/blockbench-mcp-plus",
+				"--root",
+				"${input:rootDir}"
+			]
+		}
+	},
+	"inputs": [
+		{
+			"id": "rootDir",
+			"type": "promptString",
+			"description": "Root directory for headless Blockbench models",
+			"default": "./artifacts"
+		}
+	]
+}

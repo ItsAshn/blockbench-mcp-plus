@@ -1,0 +1,67 @@
+/* Lives inside Blockbench's fixed-height #status_bar flex row; inherit its sizing and use theme colors. */
+#mcp-status-bar {
+    align-items: center;
+    display: flex;
+    font-size: 0.85em;
+    margin-inline-start: auto;
+    user-select: none;
+}
+
+#mcp-status-bar .mcp-status-indicator {
+    align-items: center;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    display: flex;
+    gap: 0.375rem;
+    padding: 0.125rem 0.5rem;
+    transition: background-color 200ms ease;
+
+    &:hover {
+        background-color: var(--color-button);
+        color: var(--color-light);
+    }
+}
+
+#mcp-status-bar .mcp-status-dot {
+    background-color: var(--color-subtle_text);
+    block-size: 0.5rem;
+    border-radius: 50%;
+    inline-size: 0.5rem;
+    transition: background-color 300ms ease;
+
+    &.connected {
+        animation: mcp-status-pulse 2s ease-in-out infinite;
+        background-color: var(--color-confirm);
+        box-shadow: 0 0 0.5rem rgb(from var(--color-confirm) r g b / 60%);
+    }
+
+    &.disconnected {
+        background-color: var(--color-error);
+    }
+}
+
+#mcp-status-bar .mcp-status-text {
+    color: var(--color-text);
+    font-weight: 500;
+}
+
+#mcp-status-bar .mcp-server-info {
+    color: var(--color-subtle_text);
+    font-family: var(--font-code);
+    font-size: 0.9em;
+}
+
+@keyframes mcp-status-pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #mcp-status-bar .mcp-status-dot.connected {
+        animation: none;
+    }
+}

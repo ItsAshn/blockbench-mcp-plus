@@ -1,0 +1,476 @@
+import { z } from "zod";
+import { ACTIVE_VIEW_ID } from "@/lib/constants";
+
+// ============================================================================
+// Vector Schemas
+// ============================================================================
+
+/** 2D vector [x, y] */
+export const vector2Schema = z
+  .array(z.number())
+  .length(2)
+  .describe("2D vector [x, y].");
+
+/** 3D vector [x, y, z] */
+export const vector3Schema = z
+  .array(z.number())
+  .length(3)
+  .describe("3D vector [x, y, z].");
+
+/**
+ * Returns a *fresh* 3D vector schema instance on every call.
+ *
+ * Prefer this over sharing the module-level {@link vector3Schema} instance
+ * across multiple fields of the same `z.object`. The MCP SDK converts input
+ * schemas with `zod-to-json-schema` using `$refStrategy: "root"`, which
+ * deduplicates repeated schema instances *by object identity*: the second
+ * occurrence of a shared instance is emitted as a bare `{ "$ref": "#/…" }`
+ * with no `type`/`items`/`description`. Clients that don't resolve local
+ * `$ref`s (Claude Code among them) then see an untyped property and send it
+ * as a string, which server-side validation rejects — making the tool
+ * uncallable. Giving each field its own instance keeps the advertised schema
+ * fully inlined and typed. See issue #44.
+ *
+ * @param description - Optional field description surfaced in the JSON schema.
+ * @returns A new `z.array(z.number()).length(3)` schema.
+ */
+export const vec3 = (description?: string) => {
+  const schema = z.array(z.number()).length(3);
+  return description ? schema.describe(description) : schema;
+};
+
+// ============================================================================
+// Enum Schemas
+// ============================================================================
+
+/** Blend modes for paint tools */
+export const blendModeEnum = z.enum([
+  "default",
+  "set_opacity",
+  "color",
+  "behind",
+  "multiply",
+  "add",
+  "screen",
+  "overlay",
+  "difference",
+]);
+
+/** Layer blend modes (slightly different set for layers) */
+export const layerBlendModeEnum = z.enum([
+  "normal",
+  "multiply",
+  "screen",
+  "overlay",
+  "soft_light",
+  "hard_light",
+  "color_dodge",
+  "color_burn",
+  "darken",
+  "lighten",
+  "difference",
+  "exclusion",
+]);
+
+/** Keyframe interpolation types */
+export const interpolationEnum = z.enum(["linear", "catmullrom", "bezier", "step"]);
+
+/** Basic 3D axis */
+export const axisEnum = z.enum(["x", "y", "z"]);
+
+/** 3D axis with 'all' option */
+export const axisWithAllEnum = axisEnum.or(z.literal("all"));
+
+/** Animation channels */
+export const animationChannelEnum = z.enum(["rotation", "position", "scale"]);
+
+/** Selection action modes */
+export const selectionActionEnum = z.enum(["select", "add", "remove", "toggle"]);
+
+/** Brush shapes */
+export const brushShapeEnum = z.enum(["square", "circle"]);
+
+/** Auto UV settings: 0=disabled, 1=enabled, 2=relative */
+export const autoUvEnum = z.enum(["0", "1", "2"]);
+
+/** Cube faces */
+export const faceEnum = z.enum(["north", "south", "east", "west", "up", "down"]);
+
+/** Camera projection types */
+export const projectionEnum = z.enum(["unset", "orthographic", "perspective"]);
+
+/** Reference to a render target accepted by view-aware camera tools. */
+export const viewRefSchema = z
+  .string()
+  .min(1)
+  .describe(
+    `View to target: "${ACTIVE_VIEW_ID}" for the viewport the user last interacted with, the ID of an offscreen view from create_offscreen_view, or a viewport ID from list_views.`
+  );
+
+/** Orthographic side views a camera can lock to. */
+export const lockedAngleEnum = z.enum(["top", "bottom", "north", "south", "east", "west"]);
+
+/** Encodings a tool can return an image in. */
+export const imageFormatEnum = z.enum(["png", "jpeg", "webp"]);
+
+/** Optional size and encoding of an image a tool returns; leaving both out keeps the full-size PNG. */
+export const imageOutputShape = {
+  max_size: z.number().int().min(16).max(8192).optional()
+    .describe("Longest side of the returned image in pixels; larger images are scaled down proportionally. Omit for full size."),
+  format: imageFormatEnum.optional()
+    .describe('Encoding of the returned image: "png" (default, lossless), or the smaller "jpeg" (no transparency: transparent pixels become white) or "webp".'),
+};
+
+/** Agent-chosen identifier for a plugin-owned offscreen view. */
+export const offscreenViewIdSchema = z
+  .string()
+  .regex(/^[A-Za-z0-9_-]{1,64}$/, "Use 1–64 letters, digits, underscores, or hyphens.")
+  .describe("Offscreen view ID.");
+
+/** Mesh selection modes */
+export const meshSelectionModeEnum = z.enum(["vertex", "edge", "face"]);
+
+/** UV mapping modes */
+export const uvMappingModeEnum = z.enum(["project", "unwrap", "cylinder", "sphere"]);
+
+/** Fill modes for paint fill tool */
+export const fillModeEnum = z.enum([
+  "color",
+  "color_connected",
+  "face",
+  "element",
+  "selected_elements",
+  "selection",
+]);
+
+/** Shape types for draw shape tool */
+export const drawShapeEnum = z.enum(["rectangle", "rectangle_h", "ellipse", "ellipse_h"]);
+
+/** Copy brush modes */
+export const copyBrushModeEnum = z.enum(["copy", "sample", "pattern"]);
+
+/** Brush modifier types for stylus */
+export const brushModifierEnum = z.enum(["none", "pressure", "tilt"]);
+
+/** PBR texture channels */
+export const pbrChannelEnum = z.enum(["color", "normal", "height", "mer"]);
+
+/** Texture render modes */
+export const renderModeEnum = z.enum(["default", "emissive", "additive", "layered"]);
+
+/** Texture render sides */
+export const renderSidesEnum = z.enum(["auto", "front", "double"]);
+
+/** Loop modes for animation */
+export const loopModeEnum = z.enum(["once", "loop", "hold"]);
+
+/** Java Edition display slots (keys of `Project.display_settings`) */
+export const displaySlotEnum = z.enum([
+  "thirdperson_righthand",
+  "thirdperson_lefthand",
+  "firstperson_righthand",
+  "firstperson_lefthand",
+  "ground",
+  "gui",
+  "head",
+  "embedded",
+  "fixed",
+  "on_shelf",
+]);
+
+// ============================================================================
+// Color Schemas
+// ============================================================================
+
+/**
+ * Returns a *fresh* 8-bit color channel schema (inclusive 0-255) on every call.
+ * Fractional values are accepted to match existing tool contracts; chain
+ * `.int()` where the input format (such as Bedrock texture_set.json) requires
+ * whole numbers. A factory rather than a shared instance for the same reason as
+ * {@link vec3}: the MCP SDK emits repeated instances as bare `$ref`s (issue #44).
+ *
+ * @returns A new `z.number().min(0).max(255)` schema.
+ */
+export const colorByte = () => z.number().min(0).max(255);
+
+/**
+ * Returns a *fresh* RGB or MER triple of 8-bit channels, e.g.
+ * `[metalness, emissive, roughness]`, with independent channel instances.
+ *
+ * @returns A new 3-tuple schema of {@link colorByte} channels.
+ */
+export const rgbByteTuple = () => z.tuple([colorByte(), colorByte(), colorByte()]);
+
+/**
+ * Returns a *fresh* RGBA or MERS quadruple of 8-bit channels, e.g.
+ * `[r, g, b, a]`, with independent channel instances.
+ *
+ * @returns A new 4-tuple schema of {@link colorByte} channels.
+ */
+export const rgbaByteTuple = () => z.tuple([colorByte(), colorByte(), colorByte(), colorByte()]);
+
+/** Parsed `[r, g, b]` / `[metalness, emissive, roughness]` byte triple. */
+export type RgbByteTuple = z.infer<ReturnType<typeof rgbByteTuple>>;
+
+/** Parsed `[r, g, b, a]` byte quadruple. */
+export type RgbaByteTuple = z.infer<ReturnType<typeof rgbaByteTuple>>;
+
+/** Flexible color input: RGBA array, hex string, or named color */
+export const colorSchema = z.union([
+  z
+    .array(z.number().min(0).max(255))
+    .length(4)
+    .describe("RGBA [R, G, B, A]"),
+  z
+    .string()
+    .regex(
+      /^(?:#(?:[A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})|[a-z]{3,20})$/,
+      "Hex color #RRGGBB or #RRGGBBAA, or named color"
+    ),
+]);
+
+/** Hex color string */
+export const hexColorSchema = z
+  .string()
+  .optional()
+  .describe("Color as hex string (e.g., #FF0000).");
+
+// ============================================================================
+// Time/Range Schemas
+// ============================================================================
+
+/** Time range with start and end */
+export const timeRangeSchema = z.object({
+  start: z.number().describe("Start time in seconds."),
+  end: z.number().describe("End time in seconds."),
+});
+
+// ============================================================================
+// ID/Reference Schemas
+// ============================================================================
+
+/** Required element ID or name */
+export const elementIdSchema = z
+  .string()
+  .describe("ID or name of the element.");
+
+/** Optional mesh ID with fallback to selected */
+export const meshIdOptionalSchema = z
+  .string()
+  .optional()
+  .describe("ID or name of the mesh. If not provided, uses selected mesh.");
+
+/** Required mesh ID */
+export const meshIdSchema = z
+  .string()
+  .describe("ID or name of the mesh.");
+
+/** Optional texture ID with fallback to selected */
+export const textureIdOptionalSchema = z
+  .string()
+  .optional()
+  .describe("Texture ID or name. If not provided, uses selected texture.");
+
+/** Required texture ID */
+export const textureIdSchema = z
+  .string()
+  .describe("Texture ID or name.");
+
+/** Optional animation ID with fallback to current */
+export const animationIdOptionalSchema = z
+  .string()
+  .optional()
+  .describe("Animation UUID or name. If not provided, uses current animation.");
+
+/** Optional group/bone ID */
+export const groupIdOptionalSchema = z
+  .string()
+  .optional()
+  .describe("Group/bone ID or name.");
+
+/** Required bone name */
+export const boneNameSchema = z
+  .string()
+  .describe("Name of the bone/group.");
+
+/** Optional cube ID with fallback to selected */
+export const cubeIdOptionalSchema = z
+  .string()
+  .optional()
+  .describe("ID or name of the cube. If not provided, uses selected cube.");
+
+/** Required cube ID */
+export const cubeIdSchema = z
+  .string()
+  .describe("ID or name of the cube.");
+
+/** Face keys array (optional) */
+export const faceKeysOptionalSchema = z
+  .array(z.string())
+  .optional()
+  .describe("Specific face keys. If not provided, uses all/selected faces.");
+
+// ============================================================================
+// Common Parameter Schemas
+// ============================================================================
+
+/**
+ * Brush/tool opacity, always on the 0-255 scale.
+ *
+ * Blockbench 5.2 added the `opacity_range` setting (`"255"` or `"100"`), which
+ * changes the scale of the brush opacity slider. The public MCP API stays 0-255
+ * regardless; paint tools convert to the active range before touching the slider.
+ */
+export const opacitySchema = z
+  .number()
+  .min(0)
+  .max(255)
+  .optional()
+  .describe("Opacity (0-255), independent of Blockbench's opacity range setting.");
+
+/** Brush size 1-100 */
+export const brushSizeSchema = z
+  .number()
+  .min(1)
+  .max(100)
+  .optional()
+  .describe("Brush size.");
+
+/** Brush softness 0-100 */
+export const brushSoftnessSchema = z
+  .number()
+  .min(0)
+  .max(100)
+  .optional()
+  .describe("Brush softness percentage.");
+
+/** 2D coordinate point */
+export const coordinateSchema = z.object({
+  x: z.number().describe("X coordinate."),
+  y: z.number().describe("Y coordinate."),
+});
+
+/** UV rotation angle enum */
+export const uvRotationAngleEnum = z.enum(["-90", "90", "180"]);
+
+/** Mouse button enum */
+export const mouseButtonEnum = z.enum(["left", "right"]);
+
+/** Stretch values for Hytale cubes */
+export const stretchSchema = z
+  .array(z.number())
+  .length(3)
+  .describe("Stretch values [x, y, z].");
+
+/** Size 2D schema */
+export const size2dSchema = z
+  .array(z.number())
+  .length(2)
+  .describe("Size [width, height].");
+
+// ============================================================================
+// Composite Schemas (using base schemas)
+// ============================================================================
+
+/** Cube element schema */
+export const cubeSchema = z.object({
+  name: z.string(),
+  origin: vector3Schema
+    .optional()
+    .default([0, 0, 0])
+    .describe("Pivot point of the cube."),
+  from: vector3Schema
+    .optional()
+    .default([0, 0, 0])
+    .describe("Starting point of the cube."),
+  to: vector3Schema
+    .optional()
+    .default([1, 1, 1])
+    .describe("Ending point of the cube."),
+  rotation: vector3Schema
+    .optional()
+    .default([0, 0, 0])
+    .describe("Rotation of the cube."),
+  inflate: z
+    .number()
+    .finite()
+    .optional()
+    .describe("Grows the cube by this amount on every side without changing from/to."),
+  uv_offset: z
+    .array(z.number().finite())
+    .length(2)
+    .optional()
+    .describe("Box UV net offset [u, v]. Requires box UV."),
+  mirror_uv: z
+    .boolean()
+    .optional()
+    .describe("Mirror the box UV net. Requires box UV; for per-face mirroring, reverse the face rectangle endpoints."),
+});
+
+/**
+ * Mesh geometry in local coordinates. Faces reference zero-based vertex indices
+ * in perimeter order; omitting faces keeps the vertex-only creation workflow.
+ * Position becomes the pivot, rotation is in degrees, and scale is baked into
+ * the vertex coordinates because Blockbench meshes do not retain object scale.
+ */
+export const meshSchema = z.object({
+  name: z.string(),
+  position: vector3Schema
+    .optional()
+    .default([0, 0, 0])
+    .describe("Position of the mesh origin/pivot. Vertices are local to this point."),
+  rotation: vector3Schema
+    .optional()
+    .default([0, 0, 0])
+    .describe("Rotation of the mesh in degrees around its origin."),
+  scale: vector3Schema
+    .optional()
+    .default([1, 1, 1])
+    .describe("Scale factors baked into local vertex coordinates before rotation."),
+  vertices: z
+    .array(vector3Schema.describe("Vertex coordinates in the mesh."))
+    .optional()
+    .default([])
+    .describe("Vertices of the mesh."),
+  faces: z
+    .array(z.array(z.number().int().nonnegative()).min(3).max(4))
+    .optional()
+    .default([])
+    .describe(
+      "Triangle or quad faces as zero-based indices into vertices, in perimeter order. Counterclockwise winding faces outward. Omit for a vertex-only mesh."
+    ),
+});
+
+/** Keyframe data for animation tools */
+export const keyframeDataSchema = z.object({
+  time: z.number().describe("Time in seconds for the keyframe."),
+  values: z
+    .union([vector3Schema, z.number()])
+    .optional()
+    .describe("Values: [x,y,z] for position/rotation, number for uniform scale."),
+  interpolation: interpolationEnum
+    .optional()
+    .describe("Interpolation type for the keyframe. New keyframes default to linear; edits keep the current interpolation when omitted."),
+  bezier_handles: z
+    .object({
+      left_time: z.number().optional(),
+      left_value: z.union([vector3Schema, z.number()]).optional(),
+      right_time: z.number().optional(),
+      right_value: z.union([vector3Schema, z.number()]).optional(),
+    })
+    .optional()
+    .describe("Bezier handle positions for bezier interpolation."),
+});
+
+/** Brush settings for paint tools */
+export const brushSettingsSchema = z
+  .object({
+    size: brushSizeSchema,
+    opacity: opacitySchema,
+    softness: brushSoftnessSchema,
+    shape: brushShapeEnum.optional().describe("Brush shape."),
+    color: hexColorSchema.describe("Brush color as hex string."),
+    blend_mode: blendModeEnum.optional().describe("Brush blend mode."),
+  })
+  .optional()
+  .describe("Brush settings to apply.");
